@@ -1,15 +1,14 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import Script from 'next/script';
+import { Noto_Sans_JP } from 'next/font/google';
+import Header from '../components/Header';
 import './globals.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const notoSansJp = Noto_Sans_JP({
+  variable: '--font-sans',
+  display: 'swap',
   subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
+  weight: ['400', '700'],
 });
 
 export const metadata: Metadata = {
@@ -23,8 +22,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body>
+    <html lang="ja" suppressHydrationWarning>
+      <head>
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`(function(){
+            try {
+              var key='theme';
+              var stored=localStorage.getItem(key);
+              if (stored === 'light' || stored === 'dark') {
+                document.documentElement.setAttribute('data-theme', stored);
+              } else {
+                // system: 属性を外して OS の設定に追従
+                document.documentElement.removeAttribute('data-theme');
+              }
+            } catch (e) {}
+          })();`}
+        </Script>
+      </head>
+      <body className={`${notoSansJp.variable} antialiased`}>
+        <Header />
+        {children}
+      </body>
     </html>
   );
 }
