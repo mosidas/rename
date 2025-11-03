@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { SelectFiles, GeneratePreview, ExecuteRename, GetHistory } from '../../wailsjs/go/main/App';
+import { SelectFiles, GeneratePreview, ExecuteRename, GetHistory, GetInitialFiles } from '../../wailsjs/go/main/App';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
 import type { main } from '../../wailsjs/go/models';
 
@@ -32,11 +32,19 @@ export default function RenamePanel() {
   const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
   const patternInputRef = useRef<HTMLInputElement>(null);
 
-  // Load history on mount
+  // Load history and initial files on mount
   useEffect(() => {
     loadHistory();
 
-    // Listen for files loaded from command-line or second instance
+    // Check if files were provided on startup via command-line
+    GetInitialFiles().then((files) => {
+      if (files && files.length > 0) {
+        setSelectedFiles(files);
+        setMessage(`${files.length}個のファイルを選択しました`);
+      }
+    });
+
+    // Listen for files loaded from second instance (when app is already running)
     EventsOn('files:loaded', (files: string[]) => {
       if (files && files.length > 0) {
         setSelectedFiles(files);

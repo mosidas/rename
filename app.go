@@ -56,15 +56,13 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
-	// If initial files were provided via command-line, load them
+	// If initial files were provided via command-line, load them into currentFiles
+	// Frontend will retrieve them via GetInitialFiles() after mounting
 	if len(a.initialFiles) > 0 {
 		a.currentFiles = make([]*domain.File, len(a.initialFiles))
 		for i, path := range a.initialFiles {
 			a.currentFiles[i] = domain.NewFile(path)
 		}
-
-		// Emit event to notify frontend
-		runtime.EventsEmit(ctx, "files:loaded", a.initialFiles)
 	}
 }
 

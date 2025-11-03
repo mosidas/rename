@@ -64,7 +64,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="px-6 h-12 flex items-center justify-between">
-        <div className="text-lg font-bold">ファイル一括リネーム</div>
+        <div className="text-lg font-bold">file rename</div>
         <div className="relative" ref={menuRef}>
           <button
             type="button"
