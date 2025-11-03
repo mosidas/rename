@@ -88,10 +88,7 @@ Finderから選択したファイルを右クリックメニューで直接Renam
 3. 以下のスクリプトを入力:
 
 ```bash
-for f in "$@"
-do
-    open -a "/Applications/rename.app" "$f"
-done
+/Applications/rename.app/Contents/MacOS/rename "$@"
 ```
 
 #### 4. 保存
