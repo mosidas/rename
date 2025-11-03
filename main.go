@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"os"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -12,8 +13,16 @@ import (
 var assets embed.FS
 
 func main() {
+	// Get command-line arguments (excluding program name)
+	argsWithoutProg := os.Args[1:]
+
 	// Create an instance of the app structure
 	app := NewApp()
+
+	// Set initial files if provided via command-line
+	if len(argsWithoutProg) > 0 {
+		app.SetInitialFiles(argsWithoutProg)
+	}
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -27,6 +36,16 @@ func main() {
 		OnStartup:        app.startup,
 		Bind: []interface{}{
 			app,
+		},
+		SingleInstanceLock: &options.SingleInstanceLock{
+			UniqueId: "com.wails.rename",
+			OnSecondInstanceLaunch: func(data options.SecondInstanceData) {
+				// When a second instance is launched, load files in the existing instance
+				if len(data.Args) > 1 {
+					files := data.Args[1:] // Skip program name
+					app.LoadFilesFromSecondInstance(files)
+				}
+			},
 		},
 	})
 
