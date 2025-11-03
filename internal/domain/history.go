@@ -1,0 +1,63 @@
+package domain
+
+const MaxHistorySize = 100
+
+// HistoryEntry represents a single history entry
+type HistoryEntry struct {
+	Pattern       string `json:"pattern"`
+	Replacement   string `json:"replacement"`
+	IsRegex       bool   `json:"isRegex"`
+	CaseInsensitive bool `json:"caseInsensitive"`
+}
+
+// History manages rename history
+// Following SRP (Single Responsibility Principle) - only manages history entries
+type History struct {
+	entries []HistoryEntry
+}
+
+// NewHistory creates a new History
+func NewHistory() *History {
+	return &History{
+		entries: make([]HistoryEntry, 0, MaxHistorySize),
+	}
+}
+
+// Add adds a new history entry
+// If duplicate exists, it moves to front instead of adding
+func (h *History) Add(entry HistoryEntry) {
+	// Check for duplicate
+	for i, existing := range h.entries {
+		if existing.Pattern == entry.Pattern &&
+			existing.Replacement == entry.Replacement &&
+			existing.IsRegex == entry.IsRegex &&
+			existing.CaseInsensitive == entry.CaseInsensitive {
+			// Move to front
+			h.entries = append([]HistoryEntry{entry}, append(h.entries[:i], h.entries[i+1:]...)...)
+			return
+		}
+	}
+
+	// Add new entry to front
+	h.entries = append([]HistoryEntry{entry}, h.entries...)
+
+	// Keep only MaxHistorySize entries
+	if len(h.entries) > MaxHistorySize {
+		h.entries = h.entries[:MaxHistorySize]
+	}
+}
+
+// GetAll returns all history entries (most recent first)
+func (h *History) GetAll() []HistoryEntry {
+	return h.entries
+}
+
+// Count returns the number of history entries
+func (h *History) Count() int {
+	return len(h.entries)
+}
+
+// Clear removes all history entries
+func (h *History) Clear() {
+	h.entries = make([]HistoryEntry, 0, MaxHistorySize)
+}

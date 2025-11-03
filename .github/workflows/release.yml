@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Build application
+        run: wails build -platform darwin/universal
+
+      - name: Create DMG
+        run: |
+          # アプリケーション名を取得
+          APP_NAME="rename"
+          BUILD_DIR="build/bin"
+
+          # DMG作成用の一時ディレクトリ
+          mkdir -p dmg-temp
+          cp -r "${BUILD_DIR}/${APP_NAME}.app" dmg-temp/
+
+          # Applicationsフォルダへのシンボリックリンク作成
+          ln -s /Applications dmg-temp/Applications
+
+          # DMG作成
+          hdiutil create -volname "${APP_NAME}" \
+            -srcfolder dmg-temp \
+            -ov -format UDZO \
+            "${BUILD_DIR}/${APP_NAME}.dmg"
+
+          # 一時ディレクトリ削除
+          rm -rf dmg-temp
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            build/bin/rename.dmg
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

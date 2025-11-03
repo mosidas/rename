@@ -1,19 +1,178 @@
-# README
+# Rename - ファイル一括リネームツール
 
-## About
+macOS専用のシンプルで強力なファイル一括リネームアプリケーション。
 
-This is the official Wails Vanilla template.
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Platform](https://img.shields.io/badge/platform-macOS-lightgrey.svg)
 
-You can configure the project by editing `wails.json`. More information about the project settings can be found
-here: https://wails.io/docs/reference/project-config
+## 特徴
 
-## Live Development
+### 🚀 リアルタイムプレビュー
+- ファイル選択後、即座にプレビュー表示
+- 入力と同時に変更結果を確認
+- 変更されるファイルが一目でわかる
 
-To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
-server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser
-and have access to your Go methods, there is also a dev server that runs on http://localhost:34115. Connect
-to this in your browser, and you can call your Go code from devtools.
+### 🎯 柔軟な置換オプション
+- **通常置換**: シンプルな文字列置換
+- **正規表現**: 複雑なパターンマッチング
+- **大小文字無視**: 柔軟な検索
 
-## Building
+### 📝 履歴機能
+- 過去の置換パターンを自動保存（最大100件）
+- 入力フィールドをクリックで履歴ドロップダウン表示
+- ワンクリックで過去のパターンを再利用
 
-To build a redistributable, production mode package, use `wails build`.
+### 🎨 モダンなUI
+- ライト/ダーク/システムテーマ対応
+- 直感的な操作性
+- レスポンシブなレイアウト
+
+### 🛡️ 安全性
+- 実行前に必ずプレビュー確認
+- エラー時は該当ファイルをスキップ
+- 成功/失敗件数を表示
+
+## インストール
+
+### リリースからダウンロード
+
+1. [Releases](https://github.com/yourusername/rename/releases)ページから最新のDMGファイルをダウンロード
+2. DMGファイルをダブルクリック
+3. `rename.app`を`Applications`フォルダにドラッグ＆ドロップ
+4. アプリケーションフォルダから起動
+
+### ソースからビルド
+
+```bash
+# 前提条件
+# - Go 1.21以上
+# - Node.js 20以上
+# - Wails CLI v2
+
+# リポジトリをクローン
+git clone https://github.com/yourusername/rename.git
+cd rename
+
+# ビルド
+wails build
+
+# アプリケーションが build/bin/rename.app に生成されます
+```
+
+## 使い方
+
+### 基本的な使い方
+
+1. **ファイルを選択**
+   - 「ファイルを選択」ボタンをクリック
+   - リネームしたいファイルを複数選択
+
+2. **置換パターンを入力**
+   - 「置換前」: 検索したい文字列を入力
+   - 「置換後」: 置き換え後の文字列を入力
+   - プレビューがリアルタイムで更新されます
+
+3. **オプション設定（必要に応じて）**
+   - ✓ 正規表現: 正規表現パターンを使用
+   - ✓ 大文字小文字を区別しない: 大小文字を無視
+
+4. **実行**
+   - 「リネーム実行」ボタンをクリック
+   - 変更されたファイル数が表示されます
+
+### 使用例
+
+#### 例1: 連番ファイルのプレフィックス変更
+```
+ファイル: test1.txt, test2.txt, test3.txt
+置換前: test
+置換後: image
+結果: image1.txt, image2.txt, image3.txt
+```
+
+#### 例2: 正規表現で日付形式を変更
+```
+ファイル: 2024-01-15_report.pdf
+置換前: (\d{4})-(\d{2})-(\d{2})
+置換後: $3-$2-$1
+✓ 正規表現
+結果: 15-01-2024_report.pdf
+```
+
+#### 例3: 大文字小文字を無視して置換
+```
+ファイル: MyFile.txt, MYFILE.pdf, myfile.doc
+置換前: myfile
+置換後: document
+✓ 大文字小文字を区別しない
+結果: document.txt, document.pdf, document.doc
+```
+
+## テーマ設定
+
+アプリケーション右上の設定ボタンからテーマを変更できます：
+
+- **ライト**: 明るいテーマ
+- **ダーク**: 暗いテーマ
+- **システム**: macOSのシステム設定に従う
+
+## 設定ファイル
+
+履歴データは以下の場所に自動保存されます：
+
+```
+~/.config/rename/config.json
+```
+
+履歴をクリアしたい場合は、このファイルを削除してください。
+
+## トラブルシューティング
+
+### アプリが起動できない
+
+macOS Gatekeeperによってブロックされている可能性があります：
+
+1. システム設定 > プライバシーとセキュリティ を開く
+2. 「"rename"は開発元を確認できないため、開けませんでした」の横の「このまま開く」をクリック
+3. 再度アプリを起動
+
+または、ターミナルから以下のコマンドを実行：
+
+```bash
+xattr -cr /Applications/rename.app
+```
+
+### プレビューが表示されない
+
+- ファイルが選択されているか確認してください
+- パターンに正規表現エラーがある場合、エラーメッセージが表示されます
+
+### リネームが失敗する
+
+- ファイルが他のアプリケーションで開かれていないか確認
+- ファイルに書き込み権限があるか確認
+- エラーメッセージを確認してください
+
+## 技術スタック
+
+- **Wails v2**: Go + Web技術でネイティブアプリを構築
+- **Go**: バックエンドロジック
+- **Next.js 15 + React 19**: モダンなフロントエンド
+- **TypeScript**: 型安全性
+- **Tailwind CSS**: スタイリング
+
+## ライセンス
+
+MIT License - 詳細は[LICENSE](LICENSE)ファイルを参照してください。
+
+## フィードバック・バグ報告
+
+問題を発見した場合や機能リクエストがある場合は、[Issues](https://github.com/yourusername/rename/issues)ページで報告してください。
+
+## 貢献
+
+Pull Requestsを歓迎します！大きな変更の場合は、まずIssueを開いて変更内容を議論してください。
+
+---
+
+Made with ❤️ using [Wails](https://wails.io)

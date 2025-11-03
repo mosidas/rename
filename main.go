@@ -8,7 +8,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
-//go:embed all:frontend/dist
+//go:embed all:frontend/out
 var assets embed.FS
 
 func main() {
@@ -18,7 +18,7 @@ func main() {
 	// Create application with options
 	err := wails.Run(&options.App{
 		Title:  "rename",
-		Width:  1024,
+		Width:  1524,
 		Height: 768,
 		AssetServer: &assetserver.Options{
 			Assets: assets,

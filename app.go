@@ -2,43 +2,172 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"os"
+	"path/filepath"
+
+	"rename/internal/domain"
+	"rename/internal/repository"
+	"rename/internal/service"
+	"rename/internal/usecase"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// App struct
+// App struct - Presentation layer (thin adapter)
+// Following DIP (Dependency Inversion Principle) - depends on abstractions (use cases)
 type App struct {
-	ctx context.Context
+	ctx                   context.Context
+	renameUseCase         *usecase.RenameUseCase
+	historyUseCase        *usecase.HistoryUseCase
+	fileSystem            *service.FileSystemService
+	currentFiles          []*domain.File
+	currentStrategy       domain.RenameStrategy
+	currentPattern        string
+	currentReplacement    string
+	currentIsRegex        bool
+	currentCaseInsensitive bool
 }
 
-// NewApp creates a new App application struct
+// NewApp creates a new App application struct with dependency injection
 func NewApp() *App {
-	return &App{}
+	// Initialize services and repositories
+	fileSystem := service.NewFileSystemService()
+
+	// Get config path
+	homeDir, _ := os.UserHomeDir()
+	configPath := filepath.Join(homeDir, ".config", "rename", "config.json")
+
+	historyRepo := repository.NewJSONHistoryRepository(configPath)
+
+	// Initialize use cases
+	renameUseCase := usecase.NewRenameUseCase(fileSystem)
+	historyUseCase := usecase.NewHistoryUseCase(historyRepo)
+
+	return &App{
+		renameUseCase:  renameUseCase,
+		historyUseCase: historyUseCase,
+		fileSystem:     fileSystem,
+		currentFiles:   make([]*domain.File, 0),
+	}
 }
 
-// startup is called when the app starts. The context is saved
-// so we can call the runtime methods
+// startup is called when the app starts
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
-// domReady is called after front-end resources have been loaded
-func (a App) domReady(ctx context.Context) {
-	// Add your action here
+// SelectFiles opens file selection dialog
+func (a *App) SelectFiles() ([]string, error) {
+	files, err := runtime.OpenMultipleFilesDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "ファイルを選択",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to File entities
+	a.currentFiles = make([]*domain.File, len(files))
+	for i, path := range files {
+		a.currentFiles[i] = domain.NewFile(path)
+	}
+
+	return files, nil
 }
 
-// beforeClose is called when the application is about to quit,
-// either by clicking the window close button or calling runtime.Quit.
-// Returning true will cause the application to continue, false will continue shutdown as normal.
-func (a *App) beforeClose(ctx context.Context) (prevent bool) {
-	return false
+// FilePreview represents a file preview for frontend
+type FilePreview struct {
+	OriginalPath string `json:"originalPath"`
+	OriginalName string `json:"originalName"`
+	NewName      string `json:"newName"`
+	HasChanged   bool   `json:"hasChanged"`
 }
 
-// shutdown is called at application termination
-func (a *App) shutdown(ctx context.Context) {
-	// Perform your teardown here
+// GeneratePreview generates rename preview
+func (a *App) GeneratePreview(pattern, replacement string, isRegex, caseInsensitive bool) ([]FilePreview, error) {
+	if len(a.currentFiles) == 0 {
+		return []FilePreview{}, nil
+	}
+
+	// Save current pattern info for later use
+	a.currentPattern = pattern
+	a.currentReplacement = replacement
+	a.currentIsRegex = isRegex
+	a.currentCaseInsensitive = caseInsensitive
+
+	// Create strategy
+	var strategy domain.RenameStrategy
+	var err error
+
+	if isRegex {
+		strategy, err = domain.NewRegexMatchStrategy(pattern, replacement)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		strategy = domain.NewExactMatchStrategy(pattern, replacement)
+	}
+
+	// Apply case-insensitive if needed
+	if caseInsensitive {
+		strategy = domain.NewCaseInsensitiveStrategy(strategy)
+	}
+
+	a.currentStrategy = strategy
+
+	// Generate preview
+	files := a.renameUseCase.GeneratePreview(a.currentFiles, strategy)
+
+	// Convert to preview
+	previews := make([]FilePreview, len(files))
+	for i, file := range files {
+		previews[i] = FilePreview{
+			OriginalPath: file.OriginalPath(),
+			OriginalName: file.OriginalName(),
+			NewName:      file.NewName(),
+			HasChanged:   file.HasChanged(),
+		}
+	}
+
+	return previews, nil
 }
 
-// Greet returns a greeting for the given name
-func (a *App) Greet(name string) string {
-	return fmt.Sprintf("Hello %s, It's show time!", name)
+// ExecuteRename executes the rename operation
+func (a *App) ExecuteRename() (usecase.RenameResult, error) {
+	if a.currentStrategy == nil {
+		return usecase.RenameResult{}, nil
+	}
+
+	result := a.renameUseCase.Execute(a.currentFiles)
+
+	// Update currentFiles with new paths after rename
+	if len(result.NewFilePaths) > 0 {
+		a.currentFiles = make([]*domain.File, len(result.NewFilePaths))
+		for i, path := range result.NewFilePaths {
+			a.currentFiles[i] = domain.NewFile(path)
+		}
+	}
+
+	// If successful, add to history
+	if result.SuccessCount > 0 {
+		entry := domain.HistoryEntry{
+			Pattern:         a.currentPattern,
+			Replacement:     a.currentReplacement,
+			IsRegex:         a.currentIsRegex,
+			CaseInsensitive: a.currentCaseInsensitive,
+		}
+		// Ignore error from history save - it's not critical
+		_ = a.historyUseCase.AddEntry(entry)
+	}
+
+	return result, nil
+}
+
+// GetHistory returns rename history
+func (a *App) GetHistory() ([]domain.HistoryEntry, error) {
+	return a.historyUseCase.GetHistory()
+}
+
+// AddToHistory adds an entry to history
+func (a *App) AddToHistory(entry domain.HistoryEntry) error {
+	return a.historyUseCase.AddEntry(entry)
 }

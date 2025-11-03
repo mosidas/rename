@@ -3,17 +3,38 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --border: #d1d5db;
+  --muted: #f9fafb;
+  --muted-foreground: #6b7280;
+  --accent: #3b82f6;
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --success: #16a34a;
 }
 
 /* 明示指定: data-theme="dark" がある場合に優先 */
 [data-theme='dark'] {
   --background: #0a0a0a;
   --foreground: #ededed;
+  --border: #4b5563;
+  --muted: #1f2937;
+  --muted-foreground: #9ca3af;
+  --accent: #3b82f6;
+  --accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --success: #16a34a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
   /* next/font で layout.tsx から注入する変数 */
   --font-sans: var(--font-sans);
 }
@@ -23,7 +44,20 @@
   :root:not([data-theme]) {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --border: #4b5563;
+    --muted: #1f2937;
+    --muted-foreground: #9ca3af;
+    --accent: #3b82f6;
+    --accent-foreground: #ffffff;
+    --destructive: #dc2626;
+    --success: #16a34a;
   }
+}
+
+html,
+body {
+  height: 100vh;
+  overflow: hidden;
 }
 
 body {
@@ -37,4 +71,8 @@ body {
     'Yu Gothic',
     'Meiryo',
     sans-serif;
+}
+
+.accent-checkbox {
+  accent-color: var(--accent);
 }
