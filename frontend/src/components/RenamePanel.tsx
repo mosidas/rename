@@ -1,23 +1,17 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { SelectFiles, GeneratePreview, ExecuteRename, GetHistory, GetInitialFiles } from '../../wailsjs/go/main/App';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
-import type { main } from '../../wailsjs/go/models';
+import { main, domain } from '../../wailsjs/go/models';
 
-interface FilePreview {
-  originalPath: string;
-  originalName: string;
-  newName: string;
-  hasChanged: boolean;
-}
+// Use Wails-generated types
+type FilePreview = main.FilePreview;
+type HistoryEntry = domain.HistoryEntry;
 
-interface HistoryEntry {
-  pattern: string;
-  replacement: string;
-  isRegex: boolean;
-  caseInsensitive: boolean;
-}
+// Constants
+const PREVIEW_DEBOUNCE_MS = 300;
+const MAX_HISTORY_DISPLAY = 10;
 
 export default function RenamePanel() {
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
@@ -45,12 +39,15 @@ export default function RenamePanel() {
     });
 
     // Listen for files loaded from second instance (when app is already running)
-    EventsOn('files:loaded', (files: string[]) => {
+    const cleanup = EventsOn('files:loaded', (files: string[]) => {
       if (files && files.length > 0) {
         setSelectedFiles(files);
         setMessage(`${files.length}個のファイルを選択しました`);
       }
     });
+
+    // Cleanup event listener on unmount
+    return cleanup;
   }, []);
 
   // Auto-generate preview when inputs change
@@ -82,7 +79,7 @@ export default function RenamePanel() {
   };
 
   // Debounced preview generation
-  const generatePreviewDebounced = (() => {
+  const generatePreviewDebounced = useCallback((() => {
     let timeoutId: NodeJS.Timeout;
     return () => {
       clearTimeout(timeoutId);
@@ -102,9 +99,9 @@ export default function RenamePanel() {
           setMessage(`プレビュー生成エラー: ${err.message || '不明なエラー'}`);
           setPreviews([]);
         }
-      }, 300);
+      }, PREVIEW_DEBOUNCE_MS);
     };
-  })();
+  })(), [selectedFiles, pattern, replacement, isRegex, caseInsensitive]);
 
   const handleExecuteRename = async () => {
     if (previews.length === 0) {
@@ -195,7 +192,7 @@ export default function RenamePanel() {
               {/* History Dropdown */}
               {showHistoryDropdown && history.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-background border rounded shadow-lg max-h-60 overflow-auto">
-                  {history.slice(0, 10).map((entry, index) => (
+                  {history.slice(0, MAX_HISTORY_DISPLAY).map((entry, index) => (
                     <button
                       key={index}
                       onClick={() => handleHistorySelect(entry)}

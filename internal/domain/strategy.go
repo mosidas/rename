@@ -54,6 +54,33 @@ func (s *RegexMatchStrategy) Apply(filename string) string {
 	return s.regex.ReplaceAllString(filename, s.replacement)
 }
 
+// PatternProvider is an interface for strategies that can expose their pattern and replacement
+// This allows CaseInsensitiveStrategy to work without type assertions
+type PatternProvider interface {
+	GetPattern() string
+	GetReplacement() string
+}
+
+// GetPattern returns the pattern for ExactMatchStrategy
+func (s *ExactMatchStrategy) GetPattern() string {
+	return s.pattern
+}
+
+// GetReplacement returns the replacement for ExactMatchStrategy
+func (s *ExactMatchStrategy) GetReplacement() string {
+	return s.replacement
+}
+
+// GetPattern returns the regex pattern string for RegexMatchStrategy
+func (s *RegexMatchStrategy) GetPattern() string {
+	return s.regex.String()
+}
+
+// GetReplacement returns the replacement for RegexMatchStrategy
+func (s *RegexMatchStrategy) GetReplacement() string {
+	return s.replacement
+}
+
 // CaseInsensitiveStrategy is a decorator that makes any strategy case-insensitive
 // Following Decorator Pattern (OCP - Open/Closed Principle)
 type CaseInsensitiveStrategy struct {
@@ -69,23 +96,25 @@ func NewCaseInsensitiveStrategy(strategy RenameStrategy) *CaseInsensitiveStrateg
 
 // Apply applies the wrapped strategy in a case-insensitive manner
 func (s *CaseInsensitiveStrategy) Apply(filename string) string {
-	// For ExactMatchStrategy, we need special handling
-	if exactStrategy, ok := s.strategy.(*ExactMatchStrategy); ok {
-		// Create a case-insensitive regex from the pattern
-		pattern := regexp.QuoteMeta(exactStrategy.pattern)
-		regex := regexp.MustCompile("(?i)" + pattern)
-		return regex.ReplaceAllString(filename, exactStrategy.replacement)
-	}
+	// If the strategy implements PatternProvider, use it
+	if provider, ok := s.strategy.(PatternProvider); ok {
+		pattern := provider.GetPattern()
+		replacement := provider.GetReplacement()
 
-	// For RegexMatchStrategy, modify the pattern to be case-insensitive
-	if regexStrategy, ok := s.strategy.(*RegexMatchStrategy); ok {
-		// Recreate the regex with case-insensitive flag
-		pattern := regexStrategy.regex.String()
-		if !strings.HasPrefix(pattern, "(?i)") {
-			regex := regexp.MustCompile("(?i)" + pattern)
-			return regex.ReplaceAllString(filename, regexStrategy.replacement)
+		// For exact match strategies, escape the pattern
+		if _, isExact := s.strategy.(*ExactMatchStrategy); isExact {
+			pattern = regexp.QuoteMeta(pattern)
 		}
+
+		// Add case-insensitive flag if not already present
+		if !strings.HasPrefix(pattern, "(?i)") {
+			pattern = "(?i)" + pattern
+		}
+
+		regex := regexp.MustCompile(pattern)
+		return regex.ReplaceAllString(filename, replacement)
 	}
 
+	// Fallback to default behavior
 	return s.strategy.Apply(filename)
 }

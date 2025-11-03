@@ -69,12 +69,9 @@ func (r *JSONHistoryRepository) Load() (*domain.History, error) {
 		return nil, err
 	}
 
-	// Reconstruct history
+	// Reconstruct history efficiently using SetEntries
 	history := domain.NewHistory()
-	// Add entries in reverse order to maintain order (most recent first)
-	for i := len(data.Entries) - 1; i >= 0; i-- {
-		history.Add(data.Entries[i])
-	}
+	history.SetEntries(data.Entries)
 
 	return history, nil
 }
