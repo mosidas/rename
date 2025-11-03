@@ -16,16 +16,17 @@ import (
 // App struct - Presentation layer (thin adapter)
 // Following DIP (Dependency Inversion Principle) - depends on abstractions (use cases)
 type App struct {
-	ctx                   context.Context
-	renameUseCase         *usecase.RenameUseCase
-	historyUseCase        *usecase.HistoryUseCase
-	fileSystem            *service.FileSystemService
-	currentFiles          []*domain.File
-	currentStrategy       domain.RenameStrategy
-	currentPattern        string
-	currentReplacement    string
-	currentIsRegex        bool
+	ctx                    context.Context
+	renameUseCase          *usecase.RenameUseCase
+	historyUseCase         *usecase.HistoryUseCase
+	fileSystem             *service.FileSystemService
+	currentFiles           []*domain.File
+	currentStrategy        domain.RenameStrategy
+	currentPattern         string
+	currentReplacement     string
+	currentIsRegex         bool
 	currentCaseInsensitive bool
+	initialFiles           []string // Files passed on startup via command-line
 }
 
 // NewApp creates a new App application struct with dependency injection
@@ -54,6 +55,17 @@ func NewApp() *App {
 // startup is called when the app starts
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+
+	// If initial files were provided via command-line, load them
+	if len(a.initialFiles) > 0 {
+		a.currentFiles = make([]*domain.File, len(a.initialFiles))
+		for i, path := range a.initialFiles {
+			a.currentFiles[i] = domain.NewFile(path)
+		}
+
+		// Emit event to notify frontend
+		runtime.EventsEmit(ctx, "files:loaded", a.initialFiles)
+	}
 }
 
 // SelectFiles opens file selection dialog
@@ -170,4 +182,29 @@ func (a *App) GetHistory() ([]domain.HistoryEntry, error) {
 // AddToHistory adds an entry to history
 func (a *App) AddToHistory(entry domain.HistoryEntry) error {
 	return a.historyUseCase.AddEntry(entry)
+}
+
+// SetInitialFiles sets files passed via command-line on startup
+func (a *App) SetInitialFiles(files []string) {
+	a.initialFiles = files
+}
+
+// GetInitialFiles returns files passed on startup (for frontend)
+func (a *App) GetInitialFiles() []string {
+	return a.initialFiles
+}
+
+// LoadFilesFromSecondInstance loads files when a second instance is launched
+func (a *App) LoadFilesFromSecondInstance(files []string) {
+	// Convert to File entities
+	a.currentFiles = make([]*domain.File, len(files))
+	for i, path := range files {
+		a.currentFiles[i] = domain.NewFile(path)
+	}
+
+	// Show the existing window
+	runtime.WindowShow(a.ctx)
+
+	// Notify frontend
+	runtime.EventsEmit(a.ctx, "files:loaded", files)
 }

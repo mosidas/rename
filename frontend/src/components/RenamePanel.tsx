@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { SelectFiles, GeneratePreview, ExecuteRename, GetHistory } from '../../wailsjs/go/main/App';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 import type { main } from '../../wailsjs/go/models';
 
 interface FilePreview {
@@ -34,6 +35,14 @@ export default function RenamePanel() {
   // Load history on mount
   useEffect(() => {
     loadHistory();
+
+    // Listen for files loaded from command-line or second instance
+    EventsOn('files:loaded', (files: string[]) => {
+      if (files && files.length > 0) {
+        setSelectedFiles(files);
+        setMessage(`${files.length}個のファイルを選択しました`);
+      }
+    });
   }, []);
 
   // Auto-generate preview when inputs change
