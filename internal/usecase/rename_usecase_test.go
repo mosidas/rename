@@ -21,8 +21,8 @@ func (m *MockFileSystemService) RenameFile(oldPath, newPath string) error {
 }
 
 func (m *MockFileSystemService) FileExists(path string) bool {
-	args := m.Called(path)
-	return args.Bool(0)
+    args := m.Called(path)
+    return args.Bool(0)
 }
 
 func TestRenameUseCase_GeneratePreview(t *testing.T) {
@@ -46,8 +46,8 @@ func TestRenameUseCase_GeneratePreview(t *testing.T) {
 }
 
 func TestRenameUseCase_Execute_Success(t *testing.T) {
-	mockFS := new(MockFileSystemService)
-	useCase := NewRenameUseCase(mockFS)
+    mockFS := new(MockFileSystemService)
+    useCase := NewRenameUseCase(mockFS)
 
 	files := []*domain.File{
 		domain.NewFile("/path/to/test1.txt"),
@@ -57,9 +57,13 @@ func TestRenameUseCase_Execute_Success(t *testing.T) {
 	strategy := domain.NewExactMatchStrategy("test", "renamed")
 	useCase.GeneratePreview(files, strategy)
 
-	// Mock file system calls
-	mockFS.On("RenameFile", "/path/to/test1.txt", "/path/to/renamed1.txt").Return(nil)
-	mockFS.On("RenameFile", "/path/to/test2.txt", "/path/to/renamed2.txt").Return(nil)
+    // File existence checks (no conflicts)
+    mockFS.On("FileExists", "/path/to/renamed1.txt").Return(false)
+    mockFS.On("FileExists", "/path/to/renamed2.txt").Return(false)
+
+    // Mock file system calls
+    mockFS.On("RenameFile", "/path/to/test1.txt", "/path/to/renamed1.txt").Return(nil)
+    mockFS.On("RenameFile", "/path/to/test2.txt", "/path/to/renamed2.txt").Return(nil)
 
 	result := useCase.Execute(files)
 
@@ -74,8 +78,8 @@ func TestRenameUseCase_Execute_Success(t *testing.T) {
 }
 
 func TestRenameUseCase_Execute_SkipOnError(t *testing.T) {
-	mockFS := new(MockFileSystemService)
-	useCase := NewRenameUseCase(mockFS)
+    mockFS := new(MockFileSystemService)
+    useCase := NewRenameUseCase(mockFS)
 
 	files := []*domain.File{
 		domain.NewFile("/path/to/test1.txt"),
@@ -86,10 +90,15 @@ func TestRenameUseCase_Execute_SkipOnError(t *testing.T) {
 	strategy := domain.NewExactMatchStrategy("test", "renamed")
 	useCase.GeneratePreview(files, strategy)
 
-	// Mock file system calls - second file fails
-	mockFS.On("RenameFile", "/path/to/test1.txt", "/path/to/renamed1.txt").Return(nil)
-	mockFS.On("RenameFile", "/path/to/test2.txt", "/path/to/renamed2.txt").Return(errors.New("permission denied"))
-	mockFS.On("RenameFile", "/path/to/test3.txt", "/path/to/renamed3.txt").Return(nil)
+    // File existence checks (no conflicts)
+    mockFS.On("FileExists", "/path/to/renamed1.txt").Return(false)
+    mockFS.On("FileExists", "/path/to/renamed2.txt").Return(false)
+    mockFS.On("FileExists", "/path/to/renamed3.txt").Return(false)
+
+    // Mock file system calls - second file fails
+    mockFS.On("RenameFile", "/path/to/test1.txt", "/path/to/renamed1.txt").Return(nil)
+    mockFS.On("RenameFile", "/path/to/test2.txt", "/path/to/renamed2.txt").Return(errors.New("permission denied"))
+    mockFS.On("RenameFile", "/path/to/test3.txt", "/path/to/renamed3.txt").Return(nil)
 
 	result := useCase.Execute(files)
 
@@ -107,20 +116,23 @@ func TestRenameUseCase_Execute_SkipOnError(t *testing.T) {
 }
 
 func TestRenameUseCase_Execute_SkipUnchangedFiles(t *testing.T) {
-	mockFS := new(MockFileSystemService)
-	useCase := NewRenameUseCase(mockFS)
+    mockFS := new(MockFileSystemService)
+    useCase := NewRenameUseCase(mockFS)
 
 	files := []*domain.File{
 		domain.NewFile("/path/to/test.txt"),
 		domain.NewFile("/path/to/other.txt"),
 	}
 
-	// Strategy that only renames "test" to "renamed"
-	strategy := domain.NewExactMatchStrategy("test", "renamed")
-	useCase.GeneratePreview(files, strategy)
+    // Strategy that only renames "test" to "renamed"
+    strategy := domain.NewExactMatchStrategy("test", "renamed")
+    useCase.GeneratePreview(files, strategy)
 
-	// Only renamed file should be processed
-	mockFS.On("RenameFile", "/path/to/test.txt", "/path/to/renamed.txt").Return(nil)
+    // File existence check (no conflict)
+    mockFS.On("FileExists", "/path/to/renamed.txt").Return(false)
+
+    // Only renamed file should be processed
+    mockFS.On("RenameFile", "/path/to/test.txt", "/path/to/renamed.txt").Return(nil)
 
 	result := useCase.Execute(files)
 
@@ -132,4 +144,63 @@ func TestRenameUseCase_Execute_SkipUnchangedFiles(t *testing.T) {
 
 	mockFS.AssertExpectations(t)
 	mockFS.AssertNotCalled(t, "RenameFile", "/path/to/other.txt", mock.Anything)
+}
+
+func TestRenameUseCase_Execute_ConflictSuffix(t *testing.T) {
+    mockFS := new(MockFileSystemService)
+    useCase := NewRenameUseCase(mockFS)
+
+    files := []*domain.File{
+        domain.NewFile("/path/to/test.txt"),
+    }
+
+    strategy := domain.NewExactMatchStrategy("test", "renamed")
+    useCase.GeneratePreview(files, strategy)
+
+    // Simulate conflicts: renamed.txt exists, renamed1.txt exists, renamed2.txt does not
+    mockFS.On("FileExists", "/path/to/renamed.txt").Return(true)
+    mockFS.On("FileExists", "/path/to/renamed1.txt").Return(true)
+    mockFS.On("FileExists", "/path/to/renamed2.txt").Return(false)
+
+    // Expect rename to the resolved name with suffix 2
+    mockFS.On("RenameFile", "/path/to/test.txt", "/path/to/renamed2.txt").Return(nil)
+
+    result := useCase.Execute(files)
+
+    assert.Equal(t, 1, result.SuccessCount)
+    assert.Equal(t, 0, result.FailureCount)
+    assert.Equal(t, 1, len(result.NewFilePaths))
+    assert.Equal(t, "/path/to/renamed2.txt", result.NewFilePaths[0])
+
+    mockFS.AssertExpectations(t)
+}
+
+func TestRenameUseCase_Execute_ConflictMaxRetries(t *testing.T) {
+    mockFS := new(MockFileSystemService)
+    useCase := NewRenameUseCase(mockFS)
+
+    files := []*domain.File{
+        domain.NewFile("/path/to/test.txt"),
+    }
+
+    strategy := domain.NewExactMatchStrategy("test", "renamed")
+    useCase.GeneratePreview(files, strategy)
+
+    // Simulate all possible names being taken (up to maxRetries = 1000)
+    // Initial check: renamed.txt exists
+    mockFS.On("FileExists", "/path/to/renamed.txt").Return(true)
+
+    // Mock FileExists to always return true for any path (all names taken)
+    mockFS.On("FileExists", mock.AnythingOfType("string")).Return(true)
+
+    result := useCase.Execute(files)
+
+    // Should fail because all names are taken
+    assert.Equal(t, 0, result.SuccessCount)
+    assert.Equal(t, 1, result.FailureCount)
+    assert.Equal(t, 1, len(result.Errors))
+    assert.Contains(t, result.Errors[0], "Failed to find available name")
+    assert.Contains(t, result.Errors[0], "1000 retries")
+    assert.Equal(t, 1, len(result.NewFilePaths))
+    assert.Equal(t, "/path/to/test.txt", result.NewFilePaths[0]) // Original path kept
 }
