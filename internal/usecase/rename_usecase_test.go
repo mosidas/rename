@@ -204,3 +204,69 @@ func TestRenameUseCase_Execute_ConflictMaxRetries(t *testing.T) {
     assert.Equal(t, 1, len(result.NewFilePaths))
     assert.Equal(t, "/path/to/test.txt", result.NewFilePaths[0]) // Original path kept
 }
+
+func TestRenameUseCase_Execute_SameNameRename(t *testing.T) {
+    mockFS := new(MockFileSystemService)
+    useCase := NewRenameUseCase(mockFS)
+
+    files := []*domain.File{
+        domain.NewFile("/path/to/test.txt"),
+    }
+
+    // Strategy that doesn't change the name
+    strategy := domain.NewExactMatchStrategy("test", "test")
+    useCase.GeneratePreview(files, strategy)
+
+    result := useCase.Execute(files)
+
+    // Should skip because file hasn't changed
+    assert.Equal(t, 0, result.SuccessCount)
+    assert.Equal(t, 0, result.FailureCount)
+    assert.Equal(t, 1, len(result.NewFilePaths))
+    assert.Equal(t, "/path/to/test.txt", result.NewFilePaths[0])
+
+    mockFS.AssertNotCalled(t, "RenameFile", mock.Anything, mock.Anything)
+}
+
+func TestRenameUseCase_Execute_EmptyPattern(t *testing.T) {
+    mockFS := new(MockFileSystemService)
+    useCase := NewRenameUseCase(mockFS)
+
+    files := []*domain.File{
+        domain.NewFile("/path/to/test.txt"),
+    }
+
+    // Empty pattern matches everything and replaces with nothing
+    strategy := domain.NewExactMatchStrategy("", "")
+    useCase.GeneratePreview(files, strategy)
+
+    result := useCase.Execute(files)
+
+    // File name becomes empty after replacement, but it's technically "changed"
+    // However, the name is same ("" replaces to ""), so HasChanged should be false
+    assert.Equal(t, 0, result.SuccessCount)
+    assert.Equal(t, 0, result.FailureCount)
+}
+
+func TestRenameUseCase_Execute_FileWithoutExtension(t *testing.T) {
+    mockFS := new(MockFileSystemService)
+    useCase := NewRenameUseCase(mockFS)
+
+    files := []*domain.File{
+        domain.NewFile("/path/to/Makefile"),
+    }
+
+    strategy := domain.NewExactMatchStrategy("Make", "BUILD")
+    useCase.GeneratePreview(files, strategy)
+
+    mockFS.On("FileExists", "/path/to/BUILDfile").Return(false)
+    mockFS.On("RenameFile", "/path/to/Makefile", "/path/to/BUILDfile").Return(nil)
+
+    result := useCase.Execute(files)
+
+    assert.Equal(t, 1, result.SuccessCount)
+    assert.Equal(t, 0, result.FailureCount)
+    assert.Equal(t, "/path/to/BUILDfile", result.NewFilePaths[0])
+
+    mockFS.AssertExpectations(t)
+}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -19,7 +20,6 @@ type App struct {
 	ctx                    context.Context
 	renameUseCase          *usecase.RenameUseCase
 	historyUseCase         *usecase.HistoryUseCase
-	fileSystem             *service.FileSystemService
 	currentFiles           []*domain.File
 	currentStrategy        domain.RenameStrategy
 	currentPattern         string
@@ -47,7 +47,6 @@ func NewApp() *App {
 	return &App{
 		renameUseCase:  renameUseCase,
 		historyUseCase: historyUseCase,
-		fileSystem:     fileSystem,
 		currentFiles:   make([]*domain.File, 0),
 	}
 }
@@ -165,8 +164,10 @@ func (a *App) ExecuteRename() (usecase.RenameResult, error) {
 			IsRegex:         a.currentIsRegex,
 			CaseInsensitive: a.currentCaseInsensitive,
 		}
-		// Ignore error from history save - it's not critical
-		_ = a.historyUseCase.AddEntry(entry)
+		// Save to history (log error but don't fail the operation)
+		if err := a.historyUseCase.AddEntry(entry); err != nil {
+			log.Printf("Warning: Failed to save history: %v", err)
+		}
 	}
 
 	return result, nil

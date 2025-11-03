@@ -61,3 +61,9 @@ func (h *History) Count() int {
 func (h *History) Clear() {
 	h.entries = make([]HistoryEntry, 0, MaxHistorySize)
 }
+
+// SetEntries sets the history entries directly (for repository loading)
+// This is more efficient than calling Add repeatedly
+func (h *History) SetEntries(entries []HistoryEntry) {
+	h.entries = entries
+}
