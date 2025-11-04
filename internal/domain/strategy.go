@@ -59,6 +59,7 @@ func (s *RegexMatchStrategy) Apply(filename string) string {
 type PatternProvider interface {
 	GetPattern() string
 	GetReplacement() string
+	NeedsEscaping() bool // Returns true if pattern needs regex escaping (for exact match)
 }
 
 // GetPattern returns the pattern for ExactMatchStrategy
@@ -71,6 +72,11 @@ func (s *ExactMatchStrategy) GetReplacement() string {
 	return s.replacement
 }
 
+// NeedsEscaping returns true for ExactMatchStrategy (pattern needs regex escaping)
+func (s *ExactMatchStrategy) NeedsEscaping() bool {
+	return true
+}
+
 // GetPattern returns the regex pattern string for RegexMatchStrategy
 func (s *RegexMatchStrategy) GetPattern() string {
 	return s.regex.String()
@@ -79,6 +85,11 @@ func (s *RegexMatchStrategy) GetPattern() string {
 // GetReplacement returns the replacement for RegexMatchStrategy
 func (s *RegexMatchStrategy) GetReplacement() string {
 	return s.replacement
+}
+
+// NeedsEscaping returns false for RegexMatchStrategy (already a regex pattern)
+func (s *RegexMatchStrategy) NeedsEscaping() bool {
+	return false
 }
 
 // CaseInsensitiveStrategy is a decorator that makes any strategy case-insensitive
@@ -101,8 +112,8 @@ func (s *CaseInsensitiveStrategy) Apply(filename string) string {
 		pattern := provider.GetPattern()
 		replacement := provider.GetReplacement()
 
-		// For exact match strategies, escape the pattern
-		if _, isExact := s.strategy.(*ExactMatchStrategy); isExact {
+		// Escape pattern if needed (for exact match strategies)
+		if provider.NeedsEscaping() {
 			pattern = regexp.QuoteMeta(pattern)
 		}
 

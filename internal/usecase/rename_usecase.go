@@ -38,12 +38,16 @@ func NewRenameUseCase(fileSystem FileSystemService) *RenameUseCase {
 }
 
 // GeneratePreview applies the strategy to files and returns preview
+// Returns a new slice of cloned files to avoid side effects
 func (uc *RenameUseCase) GeneratePreview(files []*domain.File, strategy domain.RenameStrategy) []*domain.File {
-	for _, file := range files {
-		newName := strategy.Apply(file.OriginalName())
-		file.SetNewName(newName)
+	previews := make([]*domain.File, len(files))
+	for i, file := range files {
+		cloned := file.Clone()
+		newName := strategy.Apply(cloned.OriginalName())
+		cloned.SetNewName(newName)
+		previews[i] = cloned
 	}
-	return files
+	return previews
 }
 
 // Execute performs the actual file renaming

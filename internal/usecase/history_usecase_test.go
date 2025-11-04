@@ -77,19 +77,16 @@ func TestHistoryUseCase_GetHistory(t *testing.T) {
 	mockRepo := new(MockHistoryRepository)
 
 	initialHistory := domain.NewHistory()
-	mockRepo.On("Load").Return(initialHistory, nil).Once()
-
-	useCase := NewHistoryUseCase(mockRepo)
-
-	history := domain.NewHistory()
-	history.Add(domain.HistoryEntry{
+	initialHistory.Add(domain.HistoryEntry{
 		Pattern:     "test",
 		Replacement: "TEST",
 		IsRegex:     false,
 	})
+	mockRepo.On("Load").Return(initialHistory, nil).Once()
 
-	mockRepo.On("Load").Return(history, nil)
+	useCase := NewHistoryUseCase(mockRepo)
 
+	// GetHistory should return cached entries, not reload
 	entries, err := useCase.GetHistory()
 
 	assert.NoError(t, err)
@@ -98,34 +95,15 @@ func TestHistoryUseCase_GetHistory(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestHistoryUseCase_GetHistory_LoadError(t *testing.T) {
-	mockRepo := new(MockHistoryRepository)
-
-	// Mock Load for initialization
-	mockRepo.On("Load").Return(domain.NewHistory(), nil).Once()
-
-	useCase := NewHistoryUseCase(mockRepo)
-
-	mockRepo.On("Load").Return(nil, errors.New("load failed"))
-
-	entries, err := useCase.GetHistory()
-
-	assert.Error(t, err)
-	assert.Nil(t, entries)
-	mockRepo.AssertExpectations(t)
-}
-
 func TestHistoryUseCase_GetHistory_EmptyWhenNoHistory(t *testing.T) {
 	mockRepo := new(MockHistoryRepository)
 
-	// Mock Load for initialization
+	// Mock Load for initialization - returns empty history
 	mockRepo.On("Load").Return(domain.NewHistory(), nil).Once()
 
 	useCase := NewHistoryUseCase(mockRepo)
 
-	// Return empty history when no history file exists
-	mockRepo.On("Load").Return(domain.NewHistory(), nil)
-
+	// GetHistory should return cached empty entries, not reload
 	entries, err := useCase.GetHistory()
 
 	assert.NoError(t, err)

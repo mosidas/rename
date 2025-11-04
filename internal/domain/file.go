@@ -60,3 +60,13 @@ func (f *File) SetNewName(name string) {
 func (f *File) HasChanged() bool {
 	return f.originalName != f.newName
 }
+
+// Clone creates a deep copy of the File
+func (f *File) Clone() *File {
+	return &File{
+		originalPath: f.originalPath,
+		originalName: f.originalName,
+		directory:    f.directory,
+		newName:      f.newName,
+	}
+}

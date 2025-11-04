@@ -39,16 +39,10 @@ func (uc *HistoryUseCase) AddEntry(entry domain.HistoryEntry) error {
 	return uc.repository.Save(uc.history)
 }
 
-// GetHistory returns all history entries
+// GetHistory returns all history entries from cache
+// Since this is a single-instance app, no need to reload from repository each time
 func (uc *HistoryUseCase) GetHistory() ([]domain.HistoryEntry, error) {
-	// Reload from repository to get latest
-	history, err := uc.repository.Load()
-	if err != nil {
-		return nil, err
-	}
-
-	uc.history = history
-	return history.GetAll(), nil
+	return uc.history.GetAll(), nil
 }
 
 // ClearHistory removes all history entries

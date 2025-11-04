@@ -32,8 +32,12 @@ func (h *History) Add(entry HistoryEntry) {
 			existing.Replacement == entry.Replacement &&
 			existing.IsRegex == entry.IsRegex &&
 			existing.CaseInsensitive == entry.CaseInsensitive {
-			// Move to front
-			h.entries = append([]HistoryEntry{entry}, append(h.entries[:i], h.entries[i+1:]...)...)
+			// Move to front using efficient copy
+			if i > 0 {
+				// Shift entries [0:i] to [1:i+1] and place entry at front
+				copy(h.entries[1:i+1], h.entries[0:i])
+				h.entries[0] = entry
+			}
 			return
 		}
 	}

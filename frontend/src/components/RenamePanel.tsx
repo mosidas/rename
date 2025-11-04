@@ -25,6 +25,7 @@ export default function RenamePanel() {
   const [message, setMessage] = useState('');
   const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
   const patternInputRef = useRef<HTMLInputElement>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Load history and initial files on mount
   useEffect(() => {
@@ -55,7 +56,11 @@ export default function RenamePanel() {
     if (selectedFiles.length > 0) {
       generatePreviewDebounced();
     }
-  }, [pattern, replacement, isRegex, caseInsensitive, selectedFiles]);
+    // Cleanup timeout on unmount or dependency change
+    return () => {
+      clearTimeout(debounceTimeoutRef.current);
+    };
+  }, [pattern, replacement, isRegex, caseInsensitive, selectedFiles, generatePreviewDebounced]);
 
   const loadHistory = async () => {
     try {
@@ -79,29 +84,26 @@ export default function RenamePanel() {
   };
 
   // Debounced preview generation
-  const generatePreviewDebounced = useCallback((() => {
-    let timeoutId: NodeJS.Timeout;
-    return () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(async () => {
-        if (selectedFiles.length === 0) {
-          return;
-        }
+  const generatePreviewDebounced = useCallback(() => {
+    clearTimeout(debounceTimeoutRef.current);
+    debounceTimeoutRef.current = setTimeout(async () => {
+      if (selectedFiles.length === 0) {
+        return;
+      }
 
-        try {
-          const result = await GeneratePreview(pattern, replacement, isRegex, caseInsensitive);
-          setPreviews(result || []);
-          const changedCount = result?.filter(p => p.hasChanged).length || 0;
-          if (changedCount > 0) {
-            setMessage(`${changedCount}個のファイルが変更されます`);
-          }
-        } catch (err: any) {
-          setMessage(`プレビュー生成エラー: ${err.message || '不明なエラー'}`);
-          setPreviews([]);
+      try {
+        const result = await GeneratePreview(pattern, replacement, isRegex, caseInsensitive);
+        setPreviews(result || []);
+        const changedCount = result?.filter(p => p.hasChanged).length || 0;
+        if (changedCount > 0) {
+          setMessage(`${changedCount}個のファイルが変更されます`);
         }
-      }, PREVIEW_DEBOUNCE_MS);
-    };
-  })(), [selectedFiles, pattern, replacement, isRegex, caseInsensitive]);
+      } catch (err: any) {
+        setMessage(`プレビュー生成エラー: ${err.message || '不明なエラー'}`);
+        setPreviews([]);
+      }
+    }, PREVIEW_DEBOUNCE_MS);
+  }, [selectedFiles, pattern, replacement, isRegex, caseInsensitive]);
 
   const handleExecuteRename = async () => {
     if (previews.length === 0) {
@@ -184,7 +186,7 @@ export default function RenamePanel() {
                 value={pattern}
                 onChange={(e) => setPattern(e.target.value)}
                 onFocus={() => setShowHistoryDropdown(true)}
-                onBlur={() => setTimeout(() => setShowHistoryDropdown(false), 200)}
+                onBlur={() => setShowHistoryDropdown(false)}
                 className="w-full px-3 py-2 border rounded bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                 placeholder="例: test"
               />
@@ -195,7 +197,7 @@ export default function RenamePanel() {
                   {history.slice(0, MAX_HISTORY_DISPLAY).map((entry, index) => (
                     <button
                       key={index}
-                      onClick={() => handleHistorySelect(entry)}
+                      onMouseDown={() => handleHistorySelect(entry)}
                       className="w-full text-left px-3 py-2 hover:bg-muted border-b last:border-b-0"
                     >
                       <div className="flex flex-wrap items-center gap-2 text-sm">

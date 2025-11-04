@@ -62,3 +62,21 @@ func TestFile_HasChanged(t *testing.T) {
 	file.SetNewName("file.txt")
 	assert.False(t, file.HasChanged(), "should not have changed when name is same as original")
 }
+
+func TestFile_Clone(t *testing.T) {
+	original := NewFile("/path/to/file.txt")
+	original.SetNewName("renamed.txt")
+
+	cloned := original.Clone()
+
+	// Verify cloned values match
+	assert.Equal(t, original.OriginalPath(), cloned.OriginalPath())
+	assert.Equal(t, original.OriginalName(), cloned.OriginalName())
+	assert.Equal(t, original.Directory(), cloned.Directory())
+	assert.Equal(t, original.NewName(), cloned.NewName())
+
+	// Verify it's a deep copy (modifying clone doesn't affect original)
+	cloned.SetNewName("different.txt")
+	assert.Equal(t, "renamed.txt", original.NewName())
+	assert.Equal(t, "different.txt", cloned.NewName())
+}

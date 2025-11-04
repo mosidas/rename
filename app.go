@@ -123,8 +123,11 @@ func (a *App) GeneratePreview(pattern, replacement string, isRegex, caseInsensit
 
 	a.currentStrategy = strategy
 
-	// Generate preview
+	// Generate preview (returns clones to avoid side effects)
 	files := a.renameUseCase.GeneratePreview(a.currentFiles, strategy)
+
+	// Update currentFiles with preview results for later execution
+	a.currentFiles = files
 
 	// Convert to preview
 	previews := make([]FilePreview, len(files))
@@ -176,11 +179,6 @@ func (a *App) ExecuteRename() (usecase.RenameResult, error) {
 // GetHistory returns rename history
 func (a *App) GetHistory() ([]domain.HistoryEntry, error) {
 	return a.historyUseCase.GetHistory()
-}
-
-// AddToHistory adds an entry to history
-func (a *App) AddToHistory(entry domain.HistoryEntry) error {
-	return a.historyUseCase.AddEntry(entry)
 }
 
 // SetInitialFiles sets files passed via command-line on startup
