@@ -68,7 +68,6 @@ export default function Header() {
         <div className="relative" ref={menuRef}>
           <button
             type="button"
-            type="button"
             aria-haspopup="menu"
             aria-expanded={open}
             aria-label="設定"
