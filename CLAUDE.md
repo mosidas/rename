@@ -6,7 +6,7 @@
 
 **macOS専用ファイル一括リネームツール**
 
-- **技術スタック**: Wails v2 + Go 1.21 + Next.js 15 (React 19) + TypeScript + Tailwind CSS 4
+- **技術スタック**: Wails v2 + Go 1.25 + Next.js 16 (React 19) + TypeScript + Tailwind CSS 4
 - **アーキテクチャ**: Clean Architecture / Hexagonal Architecture
 - **開発手法**: TDD (Test-Driven Development)
 - **設計原則**: SOLID原則

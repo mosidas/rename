@@ -13,7 +13,7 @@
 }
 
 /* 明示指定: data-theme="dark" がある場合に優先 */
-[data-theme='dark'] {
+[data-theme="dark"] {
   --background: #0a0a0a;
   --foreground: #ededed;
   --border: #4b5563;
@@ -63,13 +63,8 @@ body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans),
-    'Noto Sans JP',
-    system-ui,
-    -apple-system,
-    'Hiragino Kaku Gothic ProN',
-    'Yu Gothic',
-    'Meiryo',
+  font-family:
+    var(--font-sans), "Noto Sans JP", system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo",
     sans-serif;
 }
 

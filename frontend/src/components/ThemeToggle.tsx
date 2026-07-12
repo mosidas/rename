@@ -31,6 +31,7 @@ export default function ThemeToggle() {
 
   return (
     <button
+      type="button"
       onClick={toggle}
       className="px-3 py-1.5 rounded-md border text-sm"
       aria-label={theme === 'dark' ? 'ライトモードに切替' : 'ダークモードに切替'}
@@ -39,4 +40,3 @@ export default function ThemeToggle() {
     </button>
   );
 }
-

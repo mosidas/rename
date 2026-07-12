@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
 import { Noto_Sans_JP } from 'next/font/google';
+import Script from 'next/script';
 import Header from '../components/Header';
 import './globals.css';
 

@@ -3,7 +3,5 @@
 import RenamePanel from '../components/RenamePanel';
 
 export default function Home() {
-  return (
-    <RenamePanel />
-  );
+  return <RenamePanel />;
 }
