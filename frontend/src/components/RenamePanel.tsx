@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { SelectFiles, GeneratePreview, ExecuteRename, GetHistory, GetInitialFiles } from '../../wailsjs/go/main/App';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ExecuteRename, GeneratePreview, GetHistory, GetInitialFiles, SelectFiles } from '../../wailsjs/go/main/App';
+import type { domain, main } from '../../wailsjs/go/models';
 import { EventsOn } from '../../wailsjs/runtime/runtime';
-import { main, domain } from '../../wailsjs/go/models';
 
 // Use Wails-generated types
 type FilePreview = main.FilePreview;
@@ -79,29 +79,32 @@ export default function RenamePanel() {
   };
 
   // Debounced preview generation
-  const generatePreviewDebounced = useCallback((() => {
-    let timeoutId: NodeJS.Timeout;
-    return () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(async () => {
-        if (selectedFiles.length === 0) {
-          return;
-        }
-
-        try {
-          const result = await GeneratePreview(pattern, replacement, isRegex, caseInsensitive);
-          setPreviews(result || []);
-          const changedCount = result?.filter(p => p.hasChanged).length || 0;
-          if (changedCount > 0) {
-            setMessage(`${changedCount}個のファイルが変更されます`);
+  const generatePreviewDebounced = useCallback(
+    (() => {
+      let timeoutId: NodeJS.Timeout;
+      return () => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(async () => {
+          if (selectedFiles.length === 0) {
+            return;
           }
-        } catch (err: any) {
-          setMessage(`プレビュー生成エラー: ${err.message || '不明なエラー'}`);
-          setPreviews([]);
-        }
-      }, PREVIEW_DEBOUNCE_MS);
-    };
-  })(), [selectedFiles, pattern, replacement, isRegex, caseInsensitive]);
+
+          try {
+            const result = await GeneratePreview(pattern, replacement, isRegex, caseInsensitive);
+            setPreviews(result || []);
+            const changedCount = result?.filter((p) => p.hasChanged).length || 0;
+            if (changedCount > 0) {
+              setMessage(`${changedCount}個のファイルが変更されます`);
+            }
+          } catch (err: any) {
+            setMessage(`プレビュー生成エラー: ${err.message || '不明なエラー'}`);
+            setPreviews([]);
+          }
+        }, PREVIEW_DEBOUNCE_MS);
+      };
+    })(),
+    [selectedFiles, pattern, replacement, isRegex, caseInsensitive],
+  );
 
   const handleExecuteRename = async () => {
     if (previews.length === 0) {
@@ -109,7 +112,7 @@ export default function RenamePanel() {
       return;
     }
 
-    const changedCount = previews.filter(p => p.hasChanged).length;
+    const changedCount = previews.filter((p) => p.hasChanged).length;
     if (changedCount === 0) {
       setMessage('変更するファイルがありません');
       return;
@@ -131,7 +134,7 @@ export default function RenamePanel() {
 
       setMessage(
         `成功: ${result.SuccessCount}件, 失敗: ${result.FailureCount}件` +
-        (result.Errors && result.Errors.length > 0 ? `\nエラー: ${result.Errors.join(', ')}` : '')
+          (result.Errors && result.Errors.length > 0 ? `\nエラー: ${result.Errors.join(', ')}` : ''),
       );
 
       // Don't reset - keep inputs and files for continuous renaming
@@ -155,17 +158,14 @@ export default function RenamePanel() {
       {/* Header */}
       <div className="mb-6 flex items-center gap-4">
         <button
+          type="button"
           onClick={handleSelectFiles}
           className="px-4 py-2 bg-accent text-accent-foreground rounded hover:bg-accent/90 transition"
           disabled={loading}
         >
           ファイルを選択
         </button>
-        {message && (
-          <span className="text-muted-foreground text-sm">
-            {message}
-          </span>
-        )}
+        {message && <span className="text-muted-foreground text-sm">{message}</span>}
       </div>
 
       {/* 2 Column Layout - 1:2 ratio */}
@@ -175,9 +175,7 @@ export default function RenamePanel() {
           <div className="space-y-4">
             {/* Pattern Input with History Dropdown */}
             <div className="relative">
-              <label className="block text-sm font-medium mb-2 text-foreground">
-                置換前
-              </label>
+              <label className="block text-sm font-medium mb-2 text-foreground">置換前</label>
               <input
                 ref={patternInputRef}
                 type="text"
@@ -194,25 +192,24 @@ export default function RenamePanel() {
                 <div className="absolute z-10 w-full mt-1 bg-background border rounded shadow-lg max-h-60 overflow-auto">
                   {history.slice(0, MAX_HISTORY_DISPLAY).map((entry, index) => (
                     <button
+                      type="button"
                       key={index}
                       onClick={() => handleHistorySelect(entry)}
                       className="w-full text-left px-3 py-2 hover:bg-muted border-b last:border-b-0"
                     >
                       <div className="flex flex-wrap items-center gap-2 text-sm">
                         <span className="font-mono text-foreground">{entry.pattern}</span>
-                        <span className="text-xs bg-muted-foreground/20 text-muted-foreground px-2 py-0.5 rounded">→</span>
+                        <span className="text-xs bg-muted-foreground/20 text-muted-foreground px-2 py-0.5 rounded">
+                          →
+                        </span>
                         <span className="font-mono text-foreground">{entry.replacement}</span>
                       </div>
                       <div className="flex gap-2 mt-1">
                         {entry.isRegex && (
-                          <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded">
-                            正規表現
-                          </span>
+                          <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded">正規表現</span>
                         )}
                         {entry.caseInsensitive && (
-                          <span className="text-xs bg-success/20 text-success px-2 py-0.5 rounded">
-                            大小文字無視
-                          </span>
+                          <span className="text-xs bg-success/20 text-success px-2 py-0.5 rounded">大小文字無視</span>
                         )}
                       </div>
                     </button>
@@ -223,9 +220,7 @@ export default function RenamePanel() {
 
             {/* Replacement Input */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-foreground">
-                置換後
-              </label>
+              <label className="block text-sm font-medium mb-2 text-foreground">置換後</label>
               <input
                 type="text"
                 value={replacement}
@@ -253,16 +248,15 @@ export default function RenamePanel() {
                   onChange={(e) => setCaseInsensitive(e.target.checked)}
                   className="mr-2 w-4 h-4 rounded border accent-checkbox"
                 />
-                <span className="text-sm text-foreground">
-                  大文字小文字を区別しない
-                </span>
+                <span className="text-sm text-foreground">大文字小文字を区別しない</span>
               </label>
             </div>
 
             {/* Execute Button */}
             <button
+              type="button"
               onClick={handleExecuteRename}
-              disabled={loading || previews.length === 0 || previews.filter(p => p.hasChanged).length === 0}
+              disabled={loading || previews.length === 0 || previews.filter((p) => p.hasChanged).length === 0}
               className="w-full px-4 py-3 bg-destructive text-accent-foreground rounded hover:bg-destructive/90 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               リネーム実行
@@ -276,15 +270,9 @@ export default function RenamePanel() {
             <table className="w-full">
               <thead className="bg-muted sticky top-0">
                 <tr>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-foreground">
-                    元のファイル名
-                  </th>
-                  <th className="px-4 py-2 text-left text-sm font-medium text-foreground">
-                    新しいファイル名
-                  </th>
-                  <th className="px-4 py-2 text-center text-sm font-medium text-foreground w-16">
-                    変更
-                  </th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-foreground">元のファイル名</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-foreground">新しいファイル名</th>
+                  <th className="px-4 py-2 text-center text-sm font-medium text-foreground w-16">変更</th>
                 </tr>
               </thead>
               <tbody>
@@ -296,18 +284,9 @@ export default function RenamePanel() {
                   </tr>
                 ) : (
                   previews.map((preview, index) => (
-                    <tr
-                      key={index}
-                      className={`border-t ${
-                        preview.hasChanged ? 'bg-accent/5' : ''
-                      }`}
-                    >
-                      <td className="px-4 py-2 text-sm text-foreground">
-                        {preview.originalName}
-                      </td>
-                      <td className="px-4 py-2 text-sm text-foreground font-medium">
-                        {preview.newName}
-                      </td>
+                    <tr key={index} className={`border-t ${preview.hasChanged ? 'bg-accent/5' : ''}`}>
+                      <td className="px-4 py-2 text-sm text-foreground">{preview.originalName}</td>
+                      <td className="px-4 py-2 text-sm text-foreground font-medium">{preview.newName}</td>
                       <td className="px-4 py-2 text-sm text-center">
                         {preview.hasChanged ? (
                           <span className="text-success">✓</span>
