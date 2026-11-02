@@ -56,7 +56,9 @@ jobs:
 
       # main.go が frontend/out を go:embed するため、ビルドの後に実行する。
       - name: Test
-        run: go test ./...
+        run: |
+          go vet ./...
+          go test ./...
 
       - name: Verify app
         shell: bash
