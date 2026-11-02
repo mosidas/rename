@@ -6,24 +6,39 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-macos:
+    # Apple Silicon と Intel の両方で動くユニバーサルビルドを作る。アドホック署名のみで公証していない。
     runs-on: macos-latest
+    permissions:
+      contents: write
+    # 既存の run の実測 1〜4 分の約 5 倍。
+    timeout-minutes: 20
 
     steps:
+      - name: Check tag
+        shell: bash
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error title=タグの形式::タグは vX.Y.Z の形で付ける(例: v1.2.3): $GITHUB_REF_NAME"
+            exit 1
+          fi
+
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version: '1.25'
+          go-version-file: go.mod
           cache: true
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '24'
           cache: 'npm'
@@ -35,40 +50,39 @@ jobs:
           npm ci
 
       - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@"$(go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)"
 
       - name: Build application
-        run: wails build -platform darwin/universal
+        run: scripts/bundle.sh "$GITHUB_REF_NAME"
 
-      - name: Create DMG
+      # main.go が frontend/out を go:embed するため、ビルドの後に実行する。
+      - name: Test
+        run: go test ./...
+
+      - name: Verify app
+        shell: bash
         run: |
-          # アプリケーション名を取得
-          APP_NAME="rename"
-          BUILD_DIR="build/bin"
+          app=build/bin/rename.app
+          codesign --verify --strict "$app"
+          actual=$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")
+          if [[ "$actual" != "${GITHUB_REF_NAME#v}" ]]; then
+            echo "::error title=成果物の検証::Info.plist のバージョン $actual がタグ $GITHUB_REF_NAME と一致しない"
+            exit 1
+          fi
+          archs=$(lipo -archs "$app/Contents/MacOS/rename")
+          if [[ " $archs " != *" x86_64 "* || " $archs " != *" arm64 "* ]]; then
+            echo "::error title=成果物の検証::実行ファイルのアーキテクチャ $archs に x86_64 と arm64 の両方が無い"
+            exit 1
+          fi
 
-          # DMG作成用の一時ディレクトリ
-          mkdir -p dmg-temp
-          cp -r "${BUILD_DIR}/${APP_NAME}.app" dmg-temp/
-
-          # Applicationsフォルダへのシンボリックリンク作成
-          ln -s /Applications dmg-temp/Applications
-
-          # DMG作成
-          hdiutil create -volname "${APP_NAME}" \
-            -srcfolder dmg-temp \
-            -ov -format UDZO \
-            "${BUILD_DIR}/${APP_NAME}.dmg"
-
-          # 一時ディレクトリ削除
-          rm -rf dmg-temp
+      - name: Create zip
+        run: ditto -c -k --keepParent build/bin/rename.app "build/bin/rename-$GITHUB_REF_NAME.zip"
 
       - name: Create Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
-          files: |
-            build/bin/rename.dmg
-          draft: false
-          prerelease: false
+          files: build/bin/rename-${{ github.ref_name }}.zip
           generate_release_notes: true
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
