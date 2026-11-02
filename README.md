@@ -8,30 +8,14 @@ macOS用ファイル一括リネームアプリケーション。
 
 ## インストール
 
-### リリースからダウンロード
+[Releases](https://github.com/mosidas/rename/releases) から `rename-<バージョン>.zip` をダウンロードして展開し、`rename.app` を `/Applications` へ移して開く。Apple Silicon と Intel の両方で動くユニバーサルビルドである。
 
-1. [Releases](https://github.com/mosidas/rename/releases)ページから最新のDMGファイルをダウンロード
-2. DMGファイルをダブルクリック
-3. `rename.app`を`Applications`フォルダにドラッグ＆ドロップ
-4. アプリケーションフォルダから起動
+配布物はアドホック署名だけで公証していないため、初回の起動は Gatekeeper に止められる。次のどちらかで起動を許可する。
 
-### ソースからビルド
+- ターミナルで `xattr -dr com.apple.quarantine /Applications/rename.app` を実行し、隔離属性を外す。
+- 一度開いてブロックされたあと、システム設定 > プライバシーとセキュリティ の下部にある「このまま開く」を押す(macOS 14 では Finder で右クリックして「開く」でもよい)。
 
-```bash
-# 前提条件
-# - Go 1.21以上
-# - Node.js 20以上
-# - Wails CLI v2
-
-# リポジトリをクローン
-git clone https://github.com/mosidas/rename.git
-cd rename
-
-# ビルド
-wails build
-
-# アプリケーションが build/bin/rename.app に生成されます
-```
+ソースからビルドするときは、Go 1.26 以上・Node.js 24 以上・[Wails CLI](https://wails.io/docs/gettingstarted/installation) v2 を入れたうえで `scripts/bundle.sh` を実行し、できた `build/bin/rename.app` を `/Applications` へコピーして開く。
 
 ## 使い方
 
