@@ -1,10 +1,10 @@
 # Finder で選んだファイルを rename で開く
 
-Automator のクイックアクションを作り、Finder で選んだファイルを右クリックのメニューから rename に渡す手順である。対象は rename を `/Applications` に入れた利用者で、初回に 1 度だけ行う。rename 本体の使い方は README にある。
+Automator のクイックアクションを作り、Finder で選んだファイルを右クリックのメニューから rename に渡す手順である。対象は rename を `/Applications` にインストールした利用者で、初回に 1 度だけ行う。rename 本体の操作は [README](../README.md) の「使い方」に従う。
 
 ## 前提
 
-- `rename.app` が `/Applications` にある。ほかの場所に入れたときは、8. のスクリプトのパスをその場所に合わせる。
+- `rename.app` が `/Applications` にある。ほかの場所にあるときは、8. のスクリプトのパスをその場所に合わせる。
 - Automator(macOS に同梱)を使う。
 
 ## クイックアクションを作る
