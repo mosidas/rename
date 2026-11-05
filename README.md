@@ -1,10 +1,10 @@
-# Rename - ファイル一括リネームツール
+# rename
 
-macOS用ファイル一括リネームアプリケーション。
+macOS で、選んだ複数のファイルの名前を文字列の置換でまとめて変えるアプリ。
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Platform](https://img.shields.io/badge/platform-macOS-lightgrey.svg)
+## 動作環境
 
+- macOS(Apple Silicon と Intel の両方)
 
 ## インストール
 
@@ -17,95 +17,28 @@ macOS用ファイル一括リネームアプリケーション。
 
 ソースからビルドするときは、Go 1.26 以上・Node.js 24 以上・[Wails CLI](https://wails.io/docs/gettingstarted/installation) v2 を入れたうえで `scripts/bundle.sh` を実行し、できた `build/bin/rename.app` を `/Applications` へコピーして開く。
 
+どちらの方法でも、開くと「ファイルを選択」のボタンを持つウィンドウが出る。
+
 ## 使い方
 
-### 基本的な使い方
+1. 「ファイルを選択」を押し、名前を変えるファイルを複数選ぶ。ファイルを引数にして起動しても、同じように読み込まれる。
+2. 「置換前」に探す文字列、「置換後」に置き換える文字列を入れる。入れるたびに、元のファイル名と新しいファイル名の一覧が更新される。
+3. 必要なら「正規表現」「大文字小文字を区別しない」にチェックを付ける。
+4. 「リネーム実行」を押す。成功と失敗の件数が表示される。
 
-1. **ファイルを選択**
-   - 「ファイルを選択」ボタンをクリック
-   - リネームしたいファイルを複数選択
+使った置換のパターンは履歴として `~/.config/rename/config.json` に保存され、次回から「置換前」の欄を選択すると一覧から選び直せる。履歴を削除するときはこのファイルを削除する。
 
-2. **置換パターンを入力**
-   - 「置換前」: 検索したい文字列を入力
-   - 「置換後」: 置き換え後の文字列を入力
-   - プレビューがリアルタイムで更新されます
+Finder で選んだファイルを右クリックのメニューから開く手順は [docs/finder-quick-action.md](docs/finder-quick-action.md) にある。
 
-3. **オプション設定（必要に応じて）**
-   - ✓ 正規表現: 正規表現パターンを使用
-   - ✓ 大文字小文字を区別しない: 大小文字を無視
+## 開発
 
-4. **実行**
-   - 「リネーム実行」ボタンをクリック
-   - 変更されたファイル数が表示されます
+Go 1.26 以上・Node.js 24 以上・[Wails CLI](https://wails.io/docs/gettingstarted/installation) v2 を入れる。
 
-
-## 設定ファイル
-
-履歴データは以下の場所に自動保存されます：
-
+```sh
+scripts/bundle.sh   # build/bin/rename.app を作る
+go test ./...
 ```
-~/.config/rename/config.json
-```
-
-履歴をクリアしたい場合は、このファイルを削除してください。
-
-## Finder統合（Quick Action）
-
-Finderから選択したファイルを右クリックメニューで直接Renameアプリで開くことができます。
-
-### Automator Quick Actionの設定
-
-#### 1. Automatorを起動
-
-1. アプリケーション > Automator を開く
-2. 「新規書類」→「Quick Action」を選択
-
-#### 2. ワークフローを設定
-
-1. **「ワークフローが受け取る現在の項目:」** を **「ファイルまたはフォルダ」** に設定
-2. **「検索対象:」** を **「Finder.app」** に設定
-
-#### 3. シェルスクリプトアクションを追加
-
-1. 左側のアクションリストから「Run Shell Script」（シェルスクリプトを実行）を検索してダブルクリック
-2. **「Pass input:」**（入力の引き渡し方法）を **「as arguments」**（引数として）に変更
-3. 以下のスクリプトを入力:
-
-```bash
-/Applications/rename.app/Contents/MacOS/rename "$@"
-```
-
-#### 4. 保存
-
-1. `⌘S` で保存
-2. 名前: 「Renameで開く」（任意の名前でOK）
-3. 保存先は自動的に `~/Library/Services/` になります
-
-#### 5. 使用方法
-
-1. Finderでファイルを選択（複数選択可）
-2. 右クリック → 「Quick Actions」→ 「Renameで開く」を選択
-3. Renameアプリが起動し、選択したファイルが自動的にロードされます
-
-**ヒント**: 既にRenameアプリが起動している場合でも、新しいファイルが自動的にロードされ、既存のウィンドウが前面に表示されます。
-
-### トラブルシューティング
-
-**Quick Actionが表示されない場合**:
-- システム設定 > プライバシーとセキュリティ > 機能拡張 > Finder拡張機能 で、Automatorが有効になっているか確認してください
-
-**アプリのパスが違う場合**:
-- アプリを `/Applications` 以外の場所にインストールした場合は、スクリプト内のパスを変更してください
-
-
-## 技術スタック
-
-- **Wails v2**
-- **Go**
-- **Next.js 15 + React 19**
-- **TypeScript**
-- **Tailwind CSS**
 
 ## ライセンス
 
-[MIT License ](LICENSE)
+[MIT License](LICENSE)
